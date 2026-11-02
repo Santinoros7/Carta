@@ -1,0 +1,556 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Una invitación especial para ti</title>
+<style>
+/* ============================================================
+   VARIABLES
+   ============================================================ */
+:root{
+  --burgundy:#7a1230;
+  --wine:#5b0f26;
+  --rose:#e8a0b4;
+  --pink:#f8d7da;
+  --gold:#d4af37;
+  --cream:#fff8ee;
+  --cream-dark:#f3e3cf;
+  --ink:#4a2330;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{height:100%}
+body{
+  font-family:Georgia,'Palatino Linotype',Palatino,serif;
+  background:linear-gradient(135deg,var(--wine),var(--burgundy) 55%,#b24a67);
+  overflow:hidden;
+  color:var(--ink);
+}
+
+/* ============================================================
+   FONDO DE FOTOS (crossfade + Ken Burns)
+   ============================================================ */
+#bg{position:fixed;inset:0;z-index:0;overflow:hidden}
+.bg-layer{
+  position:absolute;inset:0;
+  background-size:cover;background-position:center;
+  opacity:0;transition:opacity 2s ease-in-out;
+}
+.bg-layer.active{opacity:1;animation:kenburns 16s ease-out forwards}
+@keyframes kenburns{from{transform:scale(1)}to{transform:scale(1.14)}}
+.overlay{
+  position:fixed;inset:0;z-index:1;pointer-events:none;
+  background:linear-gradient(160deg,rgba(91,15,38,.62),rgba(122,18,48,.38) 55%,rgba(232,160,180,.28));
+}
+
+/* ============================================================
+   CORAZONES FLOTANTES
+   ============================================================ */
+#hearts{position:fixed;inset:0;z-index:2;pointer-events:none;overflow:hidden}
+.heart-bg{
+  position:absolute;bottom:-40px;
+  color:#fff;
+  animation:floatUp linear forwards;
+  text-shadow:0 0 8px rgba(255,160,190,.7);
+}
+@keyframes floatUp{
+  0%{transform:translateY(0) translateX(0) rotate(0deg);opacity:0}
+  12%{opacity:var(--op,.6)}
+  50%{transform:translateY(-55vh) translateX(var(--sway,20px)) rotate(15deg)}
+  100%{transform:translateY(-115vh) translateX(0) rotate(-10deg);opacity:0}
+}
+
+/* ============================================================
+   ESCENA DEL SOBRE
+   ============================================================ */
+#scene{
+  position:fixed;inset:0;z-index:3;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  transition:opacity .9s ease,transform .9s ease;
+}
+#scene.gone{opacity:0;transform:scale(.85);pointer-events:none}
+
+.envelope-btn{
+  background:none;border:none;cursor:pointer;
+  width:min(340px,82vw);
+  aspect-ratio:3/2;
+  position:relative;
+  perspective:900px;
+  animation:bob 3.2s ease-in-out infinite;
+  -webkit-tap-highlight-color:transparent;
+}
+.envelope-btn.open{animation:none}
+@keyframes bob{
+  0%,100%{transform:translateY(0)}
+  50%{transform:translateY(-10px)}
+}
+.env-back{
+  position:absolute;inset:0;
+  background:var(--cream-dark);
+  border-radius:6px;
+  box-shadow:0 18px 40px rgba(0,0,0,.45);
+}
+.env-letter{
+  position:absolute;left:7%;right:7%;top:6%;bottom:6%;
+  background:var(--cream);
+  border-radius:4px;
+  z-index:1;
+  transition:transform .9s cubic-bezier(.4,0,.2,1) .55s;
+  display:flex;align-items:center;justify-content:center;
+  color:var(--burgundy);font-size:1.6rem;
+}
+.envelope-btn.open .env-letter{transform:translateY(-55%)}
+.env-front{
+  position:absolute;inset:0;z-index:2;
+  background:linear-gradient(180deg,#fff3e2,var(--cream));
+  clip-path:polygon(0 0,50% 54%,100% 0,100% 100%,0 100%);
+  border-radius:6px;
+}
+.env-flap{
+  position:absolute;left:0;top:0;width:100%;height:56%;z-index:3;
+  background:linear-gradient(180deg,#f7e6d2,#fff3e2);
+  clip-path:polygon(0 0,100% 0,50% 100%);
+  transform-origin:top center;
+  transition:transform .8s ease,z-index 0s linear .4s;
+  filter:drop-shadow(0 3px 3px rgba(0,0,0,.2));
+}
+.envelope-btn.open .env-flap{transform:rotateX(180deg);z-index:0}
+.seal{
+  position:absolute;left:50%;top:54%;z-index:4;
+  width:58px;height:58px;margin:-29px 0 0 -29px;
+  border-radius:50%;
+  background:radial-gradient(circle at 35% 30%,#d6455f,#9b1a38 70%);
+  box-shadow:0 4px 10px rgba(0,0,0,.45),inset 0 0 0 3px rgba(255,255,255,.12);
+  display:flex;align-items:center;justify-content:center;
+  color:#ffd6de;font-size:26px;
+  animation:beat 1.6s ease-in-out infinite;
+  transition:opacity .4s ease;
+}
+.envelope-btn.open .seal{opacity:0;animation:none}
+@keyframes beat{
+  0%,100%{transform:scale(1)}
+  15%{transform:scale(1.14)}
+  30%{transform:scale(1)}
+  45%{transform:scale(1.1)}
+}
+.hint{
+  margin-top:34px;color:#fff;font-style:italic;letter-spacing:.06em;
+  font-size:1.1rem;text-shadow:0 2px 8px rgba(0,0,0,.5);
+  animation:pulse 2.4s ease-in-out infinite;
+}
+.hint.hide{display:none}
+@keyframes pulse{0%,100%{opacity:.55}50%{opacity:1}}
+
+/* ============================================================
+   CARTA ABIERTA (centrada, con scroll propio)
+   ============================================================ */
+#modal{
+  position:fixed;inset:0;z-index:5;
+  display:flex;align-items:center;justify-content:center;
+  padding:14px;
+  visibility:hidden;opacity:0;
+  transition:opacity .9s ease,visibility 0s linear .9s;
+}
+#modal.show{visibility:visible;opacity:1;transition:opacity .9s ease}
+
+.paper{
+  width:100%;max-width:560px;
+  max-height:92vh;max-height:92dvh;
+  overflow-y:auto;
+  -webkit-overflow-scrolling:touch;
+  background:
+    radial-gradient(circle at 20% 10%,rgba(232,160,180,.14),transparent 45%),
+    radial-gradient(circle at 85% 90%,rgba(212,175,55,.12),transparent 45%),
+    var(--cream);
+  border-radius:10px;
+  border:1px solid #e6d3b5;
+  box-shadow:0 0 0 6px rgba(255,248,238,.35),0 25px 60px rgba(0,0,0,.55);
+  padding:38px 30px 34px;
+  text-align:center;
+  transform:translateY(40px) scale(.94);
+  transition:transform 1s cubic-bezier(.2,.8,.2,1);
+  position:relative;
+}
+#modal.show .paper{transform:translateY(0) scale(1)}
+.paper::before{
+  content:"";position:absolute;inset:10px;pointer-events:none;
+  border:1px solid rgba(212,175,55,.55);border-radius:6px;
+}
+.orn{color:var(--burgundy);font-size:1.5rem;letter-spacing:.4em;margin-bottom:8px}
+h1{
+  font-family:'Palatino Linotype',Palatino,Georgia,serif;
+  color:var(--burgundy);
+  font-size:clamp(1.5rem,6.2vw,2.1rem);
+  letter-spacing:.1em;
+  line-height:1.2;
+  padding-bottom:14px;margin-bottom:22px;
+  border-bottom:2px solid var(--gold);
+  display:inline-block;
+}
+.paper p{
+  font-size:clamp(1rem,4.2vw,1.12rem);
+  line-height:1.7;
+  color:var(--ink);
+  margin-bottom:16px;
+  opacity:0;transform:translateY(12px);
+  transition:opacity 1s ease,transform 1s ease;
+}
+.paper p.reveal{opacity:1;transform:none}
+.paper p strong{color:var(--burgundy)}
+.date{font-weight:bold;color:var(--burgundy)}
+.btn-accept{
+  margin-top:10px;
+  padding:15px 28px;
+  min-height:50px;
+  background:linear-gradient(135deg,#a3173e,var(--burgundy));
+  color:#fff;border:2px solid var(--gold);border-radius:50px;
+  font-family:inherit;font-size:1.05rem;cursor:pointer;
+  box-shadow:0 6px 18px rgba(122,18,48,.4);
+  opacity:0;transform:translateY(12px);
+  transition:opacity 1s ease,transform .3s ease,box-shadow .3s ease;
+  -webkit-tap-highlight-color:transparent;
+}
+.btn-accept.reveal{opacity:1;transform:none}
+.btn-reread{
+  display:block;margin:22px auto 0;
+  background:none;border:none;cursor:pointer;
+  font-family:inherit;font-size:.95rem;font-style:italic;
+  color:var(--burgundy);
+  min-height:44px;padding:8px 14px;
+  opacity:0;transform:translateY(12px);
+  transition:opacity 1s ease,transform .3s ease;
+  -webkit-tap-highlight-color:transparent;
+}
+.btn-reread span{
+  display:block;font-style:normal;font-size:1.6rem;line-height:1;
+  animation:upDown 1.8s ease-in-out infinite;
+}
+@keyframes upDown{0%,100%{transform:translateY(0)}50%{transform:translateY(-5px)}}
+.btn-reread.reveal,.final .btn-reread{opacity:1;transform:none}
+.btn-reread:hover{text-decoration:underline}
+.btn-accept:hover{transform:scale(1.05);box-shadow:0 8px 24px rgba(122,18,48,.55)}
+.final h1{border:none;padding:0}
+.final p{opacity:1;transform:none}
+.big-heart{font-size:3.4rem;color:#c2254b;animation:beat 1.4s ease-in-out infinite;display:block;margin-bottom:10px}
+
+/* ============================================================
+   MODO FOTOS (la carta sale del frente)
+   ============================================================ */
+#modal.show.away{
+  opacity:0;visibility:hidden;pointer-events:none;
+  transition:opacity .7s ease,visibility 0s linear .7s;
+}
+#modal.show.away .paper{transform:translateY(70px) scale(.9)}
+.overlay{transition:opacity 1s ease}
+body.photo-mode .overlay{opacity:.3}
+
+#photoBtn{
+  position:fixed;left:16px;bottom:16px;z-index:20;
+  width:52px;height:62px;
+  padding:5px 5px 15px;
+  background:#fff;border:none;border-radius:3px;
+  box-shadow:0 6px 16px rgba(0,0,0,.45);
+  cursor:pointer;
+  transform:rotate(-5deg) translateY(90px);
+  opacity:0;pointer-events:none;
+  transition:transform .5s cubic-bezier(.2,.8,.2,1),opacity .5s ease;
+  -webkit-tap-highlight-color:transparent;
+}
+#photoBtn.visible{
+  opacity:1;pointer-events:auto;
+  transform:rotate(-5deg) translateY(0);
+}
+#photoBtn.visible:hover{transform:rotate(0deg) scale(1.1)}
+#photoBtn .pic{
+  width:100%;height:100%;
+  background:linear-gradient(160deg,#f8b4c4,#c2254b);
+  display:flex;align-items:center;justify-content:center;
+  color:#fff;font-size:20px;
+}
+#photoBtn::after{
+  content:"";position:absolute;inset:-6px;border-radius:8px;
+  border:2px solid rgba(255,255,255,.7);
+  animation:ring 2.4s ease-out infinite;pointer-events:none;
+}
+@keyframes ring{0%{transform:scale(.9);opacity:.9}100%{transform:scale(1.35);opacity:0}}
+
+/* ============================================================
+   MÚSICA
+   ============================================================ */
+#musicBtn{
+  position:fixed;right:16px;bottom:16px;z-index:20;
+  width:48px;height:48px;border-radius:50%;
+  background:rgba(255,255,255,.22);border:1px solid rgba(255,255,255,.8);
+  color:#fff;font-size:20px;cursor:pointer;
+  backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);
+}
+#musicBtn.on{background:rgba(255,255,255,.85);color:var(--burgundy)}
+
+@media (prefers-reduced-motion:reduce){
+  *{animation:none !important}
+  .bg-layer{transition:none}
+}
+</style>
+</head>
+<body>
+
+<!-- Fondo de fotos -->
+<div id="bg">
+  <div class="bg-layer" id="layerA"></div>
+  <div class="bg-layer" id="layerB"></div>
+</div>
+<div class="overlay"></div>
+<div id="hearts"></div>
+
+<button id="musicBtn" title="Música" aria-label="Activar o pausar música">🎵</button>
+
+<!-- Botón con forma de fotografía: alterna entre carta y solo fotos -->
+<button id="photoBtn" title="Ver fotos" aria-label="Ver solo las fotos">
+  <div class="pic" id="photoIcon">♥</div>
+</button>
+
+<!-- Sobre -->
+<div id="scene">
+  <button class="envelope-btn" id="envelope" aria-label="Abrir la invitación">
+    <div class="env-back"></div>
+    <div class="env-letter">♥</div>
+    <div class="env-front"></div>
+    <div class="env-flap"></div>
+    <div class="seal">❤</div>
+  </button>
+  <div class="hint" id="hint">Toca para abrir</div>
+</div>
+
+<!-- Carta -->
+<div id="modal" aria-hidden="true">
+  <div class="paper" id="paper">
+    <div id="letterContent">
+      <div class="orn">❦</div>
+      <h1>INVITACIÓN ESPECIAL</h1>
+      <p>Tengo el agrado de invitarte a una cena muy especial con motivo de nuestro primer mes juntos.</p>
+      <p>La cita tendrá lugar el día <span class="date">9 de noviembre, a las 21:00 hs.</span></p>
+      <p>Aunque esta vez nos separen algunos kilómetros, me gustaría que podamos compartir una noche diferente, disfrutar de una buena cena y celebrar este primer mes de una manera especial.</p>
+      <p>La cena corre por mi cuenta. Tu única responsabilidad será presentarte, esperar la comida, ponerte linda y disfrutar de nuestra noche.</p>
+      <p>Espero contar con tu presencia (virtual).</p>
+      <p>Con mucho cariño,<br><strong>Tu novio.</strong></p>
+      <button class="btn-accept" id="acceptBtn">Acepto con todo mi corazón ❤️</button>
+      <button class="btn-reread" data-reread aria-label="Volver al principio de la carta"><span>↑</span>Volver a leer</button>
+    </div>
+  </div>
+</div>
+
+<audio id="bgMusic" loop preload="none">
+  <source src="musica.mp3" type="audio/mpeg">
+</audio>
+
+<script>
+/* ============================================================
+   FOTOS
+   ------------------------------------------------------------
+   La página busca SOLA las fotos de la carpeta "fotos/" con
+   estos nombres: foto1, foto2, foto3 ... hasta foto30
+   y con extensión .jpg .jpeg .png .webp (también en mayúsculas).
+
+   Si tus fotos tienen otros nombres, escribilos acá abajo, ej:
+   const FOTOS_MANUAL = ["fotos/nosotros.jpg", "fotos/playa.png"];
+   ============================================================ */
+const FOTOS_MANUAL = [];
+const MAX_FOTOS = 30;
+const EXTENSIONES = ["jpg","jpeg","png","webp","JPG","JPEG","PNG","WEBP"];
+const SEGUNDOS_POR_FOTO = 7;
+
+/* ---------- utilidades ---------- */
+const $ = id => document.getElementById(id);
+const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+/* ============================================================
+   SLIDESHOW
+   ============================================================ */
+function probarImagen(src){
+  return new Promise(res=>{
+    const im = new Image();
+    im.onload = ()=>res(src);
+    im.onerror = ()=>res(null);
+    im.src = src;
+  });
+}
+async function buscarFotos(){
+  const encontradas = [];
+  for(const f of FOTOS_MANUAL){
+    const ok = await probarImagen(f);
+    if(ok) encontradas.push(ok);
+  }
+  if(encontradas.length) return encontradas;
+
+  const tareas = [];
+  for(let i=1;i<=MAX_FOTOS;i++){
+    tareas.push(
+      Promise.all(EXTENSIONES.map(ext=>probarImagen(`fotos/foto${i}.${ext}`)))
+        .then(r=>r.find(Boolean)||null)
+    );
+  }
+  return (await Promise.all(tareas)).filter(Boolean);
+}
+async function iniciarFondo(){
+  const fotos = await buscarFotos();
+  if(!fotos.length){
+    console.log("No se encontraron fotos en la carpeta 'fotos/'. Se usa el degradado por defecto.");
+    return;
+  }
+  const capas = [$("layerA"),$("layerB")];
+  let idx = 0, capa = 0;
+  function mostrar(){
+    const el = capas[capa];
+    el.classList.remove("active");
+    void el.offsetWidth;               // reinicia la animación Ken Burns
+    el.style.backgroundImage = `url("${fotos[idx]}")`;
+    el.classList.add("active");
+    capas[1-capa].classList.remove("active");
+    capa = 1-capa;
+    idx = (idx+1)%fotos.length;
+  }
+  mostrar();
+  if(fotos.length>1) setInterval(mostrar, SEGUNDOS_POR_FOTO*1000);
+}
+
+/* ============================================================
+   CORAZONES FLOTANTES
+   ============================================================ */
+function crearCorazon(){
+  if(reduceMotion || document.hidden) return;
+  const h = document.createElement("span");
+  h.className = "heart-bg";
+  h.textContent = ["❤","♥","💗","💕"][Math.floor(Math.random()*4)];
+  h.style.left = Math.random()*100+"vw";
+  h.style.fontSize = (12+Math.random()*26)+"px";
+  h.style.setProperty("--op",(0.25+Math.random()*0.5).toFixed(2));
+  h.style.setProperty("--sway",((Math.random()-.5)*80).toFixed(0)+"px");
+  const dur = 8+Math.random()*8;
+  h.style.animationDuration = dur+"s";
+  $("hearts").appendChild(h);
+  setTimeout(()=>h.remove(), dur*1000+200);
+}
+setInterval(crearCorazon, 450);
+
+/* ============================================================
+   APERTURA DEL SOBRE Y CARTA
+   ============================================================ */
+let abierto = false;
+$("envelope").addEventListener("click", ()=>{
+  if(abierto) return;
+  abierto = true;
+  $("envelope").classList.add("open");
+  $("hint").classList.add("hide");
+
+  // 1) se abre el sobre y sube la carta, 2) aparece la carta grande centrada
+  setTimeout(()=>{
+    $("scene").classList.add("gone");
+    $("modal").classList.add("show");
+    $("modal").setAttribute("aria-hidden","false");
+    $("photoBtn").classList.add("visible");
+
+    // 3) aparición escalonada del texto
+    const items = document.querySelectorAll("#letterContent p, #acceptBtn, #letterContent .btn-reread");
+    items.forEach((el,i)=>setTimeout(()=>el.classList.add("reveal"), 700 + i*550));
+  }, 1700);
+});
+
+/* ============================================================
+   EXPLOSIÓN DE CORAZONES + MENSAJE FINAL
+   ============================================================ */
+function explosion(x,y){
+  const simbolos = ["❤","💕","💖","💗","✨","🌸","♥"];
+  const colores = ["#ff4d6d","#ff8fa3","#ffb3c1","#d4af37","#fff","#c9184a"];
+  for(let i=0;i<70;i++){
+    const p = document.createElement("div");
+    p.textContent = simbolos[Math.floor(Math.random()*simbolos.length)];
+    p.style.cssText = `position:fixed;left:${x}px;top:${y}px;z-index:1000;pointer-events:none;
+      font-size:${14+Math.random()*24}px;color:${colores[Math.floor(Math.random()*colores.length)]}`;
+    document.body.appendChild(p);
+    const ang = Math.random()*Math.PI*2;
+    const dist = 120+Math.random()*320;
+    const dx = Math.cos(ang)*dist, dy = Math.sin(ang)*dist - 80;
+    const a = p.animate([
+      {transform:"translate(-50%,-50%) scale(.3) rotate(0deg)",opacity:1},
+      {transform:`translate(${dx}px,${dy}px) scale(1.2) rotate(${(Math.random()-.5)*540}deg)`,opacity:1,offset:.6},
+      {transform:`translate(${dx}px,${dy+160}px) scale(.6) rotate(${(Math.random()-.5)*720}deg)`,opacity:0}
+    ],{duration:1800+Math.random()*1400,easing:"cubic-bezier(.15,.8,.35,1)",fill:"forwards"});
+    a.onfinish = ()=>p.remove();
+  }
+}
+const cartaOriginal = $("letterContent").innerHTML;
+
+function revelar(){
+  document.querySelectorAll("#letterContent p, #acceptBtn, #letterContent .btn-reread")
+    .forEach((el,i)=>setTimeout(()=>el.classList.add("reveal"), 500 + i*450));
+}
+
+/* Flecha ↑ : vuelve al principio de la carta y la muestra de nuevo */
+function releer(){
+  const c = $("letterContent");
+  c.style.transition = "opacity .4s";
+  c.style.opacity = 0;
+  setTimeout(()=>{
+    if(c.querySelector(".final")) c.innerHTML = cartaOriginal;   // si ya había aceptado, restaura la carta
+    c.querySelectorAll("p,.btn-accept,.btn-reread").forEach(el=>el.classList.remove("reveal"));
+    $("paper").scrollTo({top:0});
+    c.style.opacity = 1;
+    revelar();
+  },400);
+}
+
+$("letterContent").addEventListener("click", e=>{
+  if(e.target.closest("[data-reread]")){ releer(); return; }
+  const btn = e.target.closest("#acceptBtn");
+  if(!btn) return;
+  const r = btn.getBoundingClientRect();
+  explosion(r.left+r.width/2, r.top+r.height/2);
+  setTimeout(()=>explosion(window.innerWidth*0.25, window.innerHeight*0.5),350);
+  setTimeout(()=>explosion(window.innerWidth*0.75, window.innerHeight*0.5),650);
+
+  const c = $("letterContent");
+  c.style.transition = "opacity .5s";
+  c.style.opacity = 0;
+  setTimeout(()=>{
+    c.innerHTML = `
+      <div class="final">
+        <span class="big-heart">❤</span>
+        <h1>¡Nos vemos el 9 de noviembre! 💕</h1>
+        <p>Prepárate para una noche mágica.</p>
+        <button class="btn-reread" data-reread aria-label="Volver a leer la carta"><span>↑</span>Volver a leer la carta</button>
+      </div>`;
+    c.style.opacity = 1;
+    $("paper").scrollTop = 0;
+  },500);
+});
+
+/* ============================================================
+   BOTÓN DE FOTOS: oculta / muestra la carta
+   ============================================================ */
+$("photoBtn").addEventListener("click", ()=>{
+  const soloFotos = $("modal").classList.toggle("away");
+  document.body.classList.toggle("photo-mode", soloFotos);
+  $("photoIcon").textContent = soloFotos ? "←" : "♥";
+  $("photoBtn").title = soloFotos ? "Volver a la carta" : "Ver fotos";
+  $("photoBtn").setAttribute("aria-label", soloFotos ? "Volver a la carta" : "Ver solo las fotos");
+  $("modal").setAttribute("aria-hidden", soloFotos ? "true" : "false");
+});
+
+/* ============================================================
+   MÚSICA
+   ============================================================ */
+$("musicBtn").addEventListener("click", ()=>{
+  const m = $("bgMusic");
+  if(m.paused){
+    m.play().then(()=>$("musicBtn").classList.add("on"))
+            .catch(()=>console.log("No se pudo reproducir (¿falta musica.mp3?)"));
+  }else{
+    m.pause();
+    $("musicBtn").classList.remove("on");
+  }
+});
+
+iniciarFondo();
+</script>
+</body>
+</html>
